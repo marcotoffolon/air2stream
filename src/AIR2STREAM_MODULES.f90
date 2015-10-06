@@ -14,7 +14,6 @@ INTEGER :: version, qty
 INTEGER, ALLOCATABLE, DIMENSION(:) :: I_pos
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: I_inf
 INTEGER,ALLOCATABLE,DIMENSION(:,:) :: date
-REAL(KIND=8):: rRANSAM                            ! parameters for RANSAM optimization algorithm
 REAL(KIND=8) :: Tice_cover, prc
 REAL(KIND=8) :: mean_obs, TSS_obs, std_obs
 REAL(KIND=8) :: mineff_index,finalfit

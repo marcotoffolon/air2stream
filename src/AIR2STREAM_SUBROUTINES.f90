@@ -183,7 +183,7 @@ ELSEIF  (fun_obj=='RMS') THEN
     DO i=1,n_dat
 	    TSS=TSS+(Twat_mod_agg(I_inf(i,3))-Twat_obs_agg(I_inf(i,3)))**2
     END DO
-    ind=-DSQRT(TSS/REAL(n_dat))
+    ind=-DSQRT(TSS/REAL(n_dat)) ! sign - --> the calibration procedure maximizes ind.    
 ELSE
 	WRITE(*,*) 'Errore nella scelta della f. obiettivo'
 END IF
@@ -379,6 +379,9 @@ ELSE
 	WRITE(*,*) 'Controllo superato'
 END IF
 	
+WRITE(11,'(<n_par>(f10.6,1x))') (par_best(i),i=1,n_par)
+WRITE(11,'(f10.6)') ei_check
+
 OPEN(UNIT=12,FILE=TRIM(folder)//'/2_'//TRIM(runmode)//'_'//fun_obj//'_'//TRIM(station)//'_'//series//'c_'//TRIM(time_res)//'.out',STATUS='unknown',ACTION='write')
 
 DO i=1,n_tot
@@ -402,8 +405,10 @@ WRITE(*,*) 'mean, TSS and standard deviation (validation)'
 WRITE(*,*)  SNGL(mean_obs),SNGL(TSS_obs),SNGL(std_obs)
 
 CALL call_model
-
 CALL funcobj(ei)
+WRITE(11,'(f10.6)') ei
+
+CLOSE(11)
 
 OPEN(UNIT=13,FILE=TRIM(folder)//'/3_'//TRIM(runmode)//'_'//fun_obj//'_'//TRIM(station)//'_'//series//'v_'//TRIM(time_res)//'.out',STATUS='unknown',ACTION='write')
 DO i=1,n_tot
@@ -411,19 +416,10 @@ WRITE(13,1005) (date(i,j),j=1,3),Tair(i),Twat_obs(i),Twat_mod(i),Twat_obs_agg(i)
 END DO
 CLOSE(13)
 
-200 OPEN(UNIT=11,FILE=TRIM(folder)//'/1_'//TRIM(runmode)//'_'//fun_obj//'_'//TRIM(station)//'_'//series//'_'//TRIM(time_res)//'.out',STATUS='unknown',ACTION='write')
-DO i=1,n_par
-	WRITE(11,*) par_best(i)
-END DO
-WRITE(11,*) finalfit
-WRITE(11,*) ei
-CLOSE(11)
-
-
 1004 FORMAT(i4,1x,i4,1x,i4,1x,5(1x,f10.5))
 1005 FORMAT(i4,1x,i4,1x,i4,1x,6(1x,f10.5))
 
-RETURN
+200 RETURN
 END
 
 !-------------------------------------------------------------------------------

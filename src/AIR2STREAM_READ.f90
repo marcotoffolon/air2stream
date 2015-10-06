@@ -4,7 +4,7 @@ USE commondata
 USE ifport                          ! necessary for makedirqq
 
 IMPLICIT NONE
-INTEGER:: i, j, status, pp
+INTEGER:: i, j, status
 CHARACTER(LEN=1) :: string
 LOGICAL result                      ! necessary for makedirqq
 
@@ -19,28 +19,38 @@ READ(1,*) time_res                  ! time resolution: 1d=daily, nw=n weeks (n=1
 READ(1,*) version                   ! version: 3,4,5,7,8 parameters
 READ(1,*) Tice_cover                ! Threshold temperature for ice formation
 READ(1,*) fun_obj                   ! objective function: KGE, NSE, RMS
-READ(1,*) prc                       ! minimum percentage of data in input: 0...1
 READ(1,*) mod_num                   ! mod_num :   RK4 , EUL , RK2 , CRN
-READ(1,*) runmode                   ! optimization algorithm: PSO or RANSAM
-CLOSE(1)
-
-model = 'air2stream'
-station=TRIM(air_station)//'_'//TRIM(water_station)
-
-WRITE(*,*) 'Objective function ',fun_obj
-
-! read PSO parameters
-OPEN(unit=1,file='PSO.txt',status='old',action='read')
-READ(1,*)		                    ! header
+READ(1,*) runmode                   ! optimization algorithm: PSO or LATHYP
+READ(1,*) prc                       ! minimum percentage of data in input: 0...1
 READ(1,*) n_run                     ! number of iterations
-READ(1,*) n_particles               ! number of particles
-READ(1,*) c1,c2                     ! constant for the equation of motion of the particles
-READ(1,*) wmax,wmin                 ! inertia min and max in the equation of motion of particles
 READ(1,*) mineff_index              ! index for the minimum efficiency that the code memorizes
 CLOSE(1)
 
-! read model parameters
-    OPEN(unit=1,file=TRIM(name)//'/parameters_air2stream.txt',status='old',action='read')
+
+station=TRIM(air_station)//'_'//TRIM(water_station)
+
+WRITE(string,'(i1)' ) version
+
+folder = TRIM(name)//'/output_'//string//'/'
+result=makedirqq(folder)
+WRITE(*,*) 'Objective function ',fun_obj
+
+IF (runmode .eq. 'FORWARD') THEN
+    OPEN(unit=1,file=TRIM(name)//'/parameters_forward.txt',status='old',action='read')    
+    READ(1,*) (par(i), i=1,n_par)  
+ELSE IF (runmode .eq. 'PSO') THEN    
+    ! read PSO parameters
+    OPEN(unit=1,file='PSO.txt',status='old',action='read')
+    READ(1,*)		    ! header
+    READ(1,*) n_particles
+    READ(1,*) c1,c2
+    READ(1,*) wmax,wmin
+    CLOSE(1)
+END IF
+
+IF (runmode .eq. 'PSO' .or. runmode .eq. 'LATHYP') THEN    
+    ! read model parameters
+    OPEN(unit=1,file=TRIM(name)//'/parameters.txt',status='old',action='read')
 
     READ(1,*) (parmin(i),i=1,n_par);	
     READ(1,*) (parmax(i),i=1,n_par);
@@ -77,26 +87,17 @@ CLOSE(1)
 	
     CLOSE(1)
 
+    ! write parameters
+    OPEN(unit=2,file=TRIM(folder)//'/parameters.txt',status='unknown',action='write')
+    WRITE(2,'(I2,A)') n_par, '   !numero parametri'
+    WRITE(2,'(<n_par>(F10.5,1x))') (parmin(i),i=1,n_par)
+    WRITE(2,'(<n_par>(F10.5,1x))') (parmax(i),i=1,n_par)
+    CLOSE(2)
 
-! write parameters
-WRITE(string,'(i1)' ) version
-folder = TRIM(name)//'/'//TRIM(model)
-result=makedirqq(folder)
-folder = TRIM(name)//'/'//TRIM(model)//'/output_'//mod_num//'_'//string//'/'
-result=makedirqq(folder)
-
-OPEN(unit=2,file=TRIM(folder)//'/parameters_air2stream.txt',status='unknown',action='write')
-
-WRITE(2,'(I2,A)') n_par, '   !numero parametri'
-WRITE(2,'(<n_par>(F10.5,1x))') (parmin(i),i=1,n_par)
-WRITE(2,'(<n_par>(F10.5,1x))') (parmax(i),i=1,n_par)
-CLOSE(2)
+END IF
 
 ! read T series (calibration)
 CALL read_Tseries('c')
-
-! open file for the writing of all parameter set + efficiency index
-OPEN(unit=10,file=TRIM(folder)//'/0_'//TRIM(runmode)//'_'//fun_obj//'_'//TRIM(station)//'_'//series//'_'//TRIM(time_res)//'.out',status='unknown',action='write',form='binary')
 
 RETURN
 END
@@ -109,6 +110,7 @@ SUBROUTINE read_validation
 USE commondata
 
 IMPLICIT NONE
+
 
 DEALLOCATE(date, tt, Tair, Twat_obs, Twat_obs_agg, Twat_mod, Twat_mod_agg, Q)
 DEALLOCATE(I_pos, I_inf)
@@ -172,25 +174,23 @@ ALLOCATE(Twat_mod_agg(n_tot),stat=status)
 ALLOCATE(tt(n_tot),stat=status)
 ALLOCATE(Q(n_tot),stat=status) 
 
-        Qmedia = 0.0d0
-        n_Q = 0
-        
-        DO i=366,n_tot
-	        READ(3,*) (date(i,j),j=1,3),Tair(i),Twat_obs(i),Q(i)
-	        IF ( Q(i) .ne. -999 ) THEN
-	        n_Q = n_Q + 1
-	        Qmedia = Qmedia + Q(i) 
-	        END IF
-        END DO
-            Qmedia = Qmedia / REAL(n_Q)
+Qmedia = 0.0d0
+n_Q = 0
+
+DO i=366,n_tot
+    READ(3,*) (date(i,j),j=1,3),Tair(i),Twat_obs(i),Q(i)
+    IF ( Q(i) .ne. -999 ) THEN
+    n_Q = n_Q + 1
+    Qmedia = Qmedia + Q(i) 
+    END IF
+END DO
+Qmedia = Qmedia / REAL(n_Q)
            
- 
 year_ini=date(366,1)
 date(1:365,:)=-999
 Tair(1:365)=Tair(366:730)
 Twat_obs(1:365)=Twat_obs(366:730)
 Q(1:365)=Q(366:730)
-
 
 CLOSE(3)
 
