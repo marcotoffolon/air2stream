@@ -7,7 +7,7 @@ c				! type of series: c=continuous series, m=mean year
 8           	! version: 3,4,5,7,8 parameters
 0				! Threshold temperature for ice formation
 RMS				! objective function: RMS (Root Mean Square Error), NSE (Nash-Sutcliffe Efficiency Index), KGE (Kling-Gupta Efficiency Index)
-RK4          	! mod_num : numerical method used to solve the model equation EUL (Euler Explicit), RK2 (Runge-Kutta 2), RK4 (Runge-Kutta 4), CRN (Crank Nicolson)
+CRN          	! mod_num : numerical method used to solve the model equation EUL (Euler Explicit), RK2 (Runge-Kutta 2), RK4 (Runge-Kutta 4), CRN (Crank Nicolson). CRN is the suggested choice!
 PSO            	! optimization algorithm: PSO (Particle Swarm Optimization) or RANSAM (Random Sampling)
 0.60			! minimum percentage of data: 0...1. E.g., when using 1m time resolution, the monthly average is set to NaN when available data during one month are less than this percentage (60% in this case)    
 500				! n_run: number of iterations
